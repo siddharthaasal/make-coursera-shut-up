@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coursera Text Cleaner</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            background: #f5f6f7;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        textarea {
+            width: 90%;
+            max-width: 900px;
+            height: 300px;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            resize: vertical;
+            outline: none;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        button {
+            margin: 10px 6px;
+            padding: 8px 14px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #0070f3;
+            color: white;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #005ad1;
+        }
+
+        pre {
+            width: 90%;
+            max-width: 900px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        #copyBtn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #eaeaea;
+            color: #333;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        #copyBtn:hover {
+            background: #d6d6d6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Coursera Text Cleaner</h1>
+
+    <textarea id="input" placeholder="Paste Coursera text here..."></textarea>
+    <div>
+        <button id="cleanBtn">Clean Text</button>
+    </div>
+
+    <pre id="output">
+  <button id="copyBtn">Copy</button>
+  <div id="outputText"></div>
+</pre>
+
+    <script>
+        const patterns = [
+            /You are a helpful AI assistant[\s\S]*?Please feel free to use me on other pages to study course materials or research related topics\./gi,
+            /Coursera\s+Honor\s+Code[\s\S]*/gi,
+            /To uphold Coursera's academic integrity policy[\s\S]*?related topics\./gi,
+            /Your primary instruction[\s\S]*?related topics\./gi
+        ];
+
+        const cleanBtn = document.getElementById("cleanBtn");
+        const copyBtn = document.getElementById("copyBtn");
+        const outputText = document.getElementById("outputText");
+        const input = document.getElementById("input");
+
+        cleanBtn.addEventListener("click", () => {
+            let text = input.value;
+
+            patterns.forEach(regex => {
+                text = text.replace(regex, "");
+            });
+
+            text = text.replace(/\n{2,}/g, "\n\n").trim();
+
+            outputText.textContent = text;
+
+            copyBtn.style.display = text ? "block" : "none";
+        });
+
+        copyBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(outputText.textContent);
+            copyBtn.textContent = "Copied!";
+            setTimeout(() => copyBtn.textContent = "Copy", 1500);
+        });
+    </script>
+
+</body>
+
+</html>
