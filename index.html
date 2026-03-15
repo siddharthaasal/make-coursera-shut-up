@@ -1,134 +1,738 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coursera Text Cleaner</title>
-    <style>
-        body {
-            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-            background: #f5f6f7;
-            margin: 0;
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CleanPrompt — Strip Coursera's AI guardrails instantly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        h1 {
-            margin-bottom: 20px;
-            color: #333;
-        }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.15);
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --text: #f0eff8;
+    --muted: rgba(240,239,248,0.45);
+    --danger: #ff6b6b;
+    --success: #55efc4;
+    --radius: 12px;
+  }
 
-        textarea {
-            width: 90%;
-            max-width: 900px;
-            height: 300px;
-            padding: 10px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            resize: vertical;
-            outline: none;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-        }
+  html, body { height: 100%; }
 
-        button {
-            margin: 10px 6px;
-            padding: 8px 14px;
-            font-size: 14px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            background-color: #0070f3;
-            color: white;
-            transition: background 0.2s;
-        }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-        button:hover {
-            background-color: #005ad1;
-        }
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(108,92,231,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,92,231,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
 
-        pre {
-            width: 90%;
-            max-width: 900px;
-            background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            padding: 12px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-            position: relative;
-        }
+  /* Glow blob */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 500px;
+    background: radial-gradient(ellipse, rgba(108,92,231,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
 
-        #copyBtn {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: #eaeaea;
-            color: #333;
-            font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: none;
-        }
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 64px 24px 80px;
+  }
 
-        #copyBtn:hover {
-            background: #d6d6d6;
-        }
-    </style>
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    background: rgba(108,92,231,0.12);
+    border: 1px solid rgba(108,92,231,0.25);
+    padding: 5px 12px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+  }
+
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent2);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(40px, 8vw, 64px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+
+  h1 span {
+    background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 50%, #fd79a8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 17px;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1.6;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  /* Stats strip */
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .stat-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--border);
+    align-self: center;
+  }
+
+  /* Editor */
+  .editor-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 600px) {
+    .editor-wrap { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .panel:focus-within {
+    border-color: rgba(108,92,231,0.4);
+    box-shadow: 0 0 0 3px rgba(108,92,231,0.08);
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .panel-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .panel-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .icon-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .icon-btn:hover {
+    border-color: var(--border-hover);
+    color: var(--text);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .char-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  textarea, .output-text {
+    width: 100%;
+    min-height: 280px;
+    max-height: 400px;
+    padding: 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: vertical;
+    overflow-y: auto;
+  }
+
+  textarea::placeholder { color: rgba(240,239,248,0.2); }
+
+  .output-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    display: block;
+    overflow-y: auto;
+  }
+
+  .output-text.empty {
+    color: rgba(240,239,248,0.2);
+    font-style: italic;
+  }
+
+  /* Removed blocks indicator */
+  .diff-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,107,107,0.1);
+    border: 1px solid rgba(255,107,107,0.2);
+    color: #ff6b6b;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin: 2px 0;
+  }
+
+  /* Action bar */
+  .action-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+
+  .btn-clean {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-clean::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+  }
+
+  .btn-clean:hover {
+    background: #7d6ff0;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(108,92,231,0.35);
+  }
+
+  .btn-clean:active {
+    transform: translateY(0);
+  }
+
+  .btn-clean svg { flex-shrink: 0; }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--border-hover);
+    color: var(--text);
+    background: rgba(255,255,255,0.03);
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    min-height: 42px;
+  }
+
+  .status-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .removed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    background: rgba(255,107,107,0.08);
+    border: 1px solid rgba(255,107,107,0.15);
+    border-radius: 100px;
+    color: #ff6b6b;
+    font-size: 11px;
+  }
+
+  .saved-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    background: rgba(85,239,196,0.08);
+    border: 1px solid rgba(85,239,196,0.15);
+    border-radius: 100px;
+    color: var(--success);
+    font-size: 11px;
+  }
+
+  .status-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Patterns list */
+  .patterns-section {
+    margin-top: 48px;
+    padding-top: 40px;
+    border-top: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .patterns-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pattern-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: default;
+    transition: border-color 0.15s;
+  }
+
+  .pattern-pill:hover { border-color: var(--border-hover); color: var(--text); }
+
+  .pattern-pill .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--danger);
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 56px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .footer a {
+    color: var(--accent2);
+    text-decoration: none;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border-hover);
+    color: var(--text);
+    font-size: 13px;
+    padding: 10px 20px;
+    border-radius: 100px;
+    font-family: 'DM Mono', monospace;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+    white-space: nowrap;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Highlight removed text in output */
+  .removed-line {
+    display: block;
+    color: rgba(255,107,107,0.4);
+    text-decoration: line-through;
+    font-size: 11px;
+  }
+</style>
 </head>
-
 <body>
+<div class="wrapper">
 
-    <h1>Shut Up, Coursera!</h1>
+  <!-- Header -->
+  <header class="header">
+    <div class="badge">
+      <span class="badge-dot"></span>
+      Free Forever &nbsp;·&nbsp; No login
+    </div>
+    <h1>Clean<span>Prompt</span></h1>
+    <p class="subtitle">Strips Coursera's AI guardrail injections from prompts — instantly. Paste, clean, copy. That's it.</p>
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-num" id="stat-cleaned">0</span>
+        <span class="stat-label">Cleaned</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-num" id="stat-chars">0</span>
+        <span class="stat-label">Chars removed</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-num">4</span>
+        <span class="stat-label">Patterns</span>
+      </div>
+    </div>
+  </header>
 
-    <textarea id="input" placeholder="Paste Coursera text here..."></textarea>
-    <div>
-        <button id="cleanBtn">Clean Text</button>
+  <!-- Editor -->
+  <div class="editor-wrap">
+    <!-- Input -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-label">Input</span>
+        <div class="panel-actions">
+          <span class="char-count" id="input-count">0 chars</span>
+          <button class="icon-btn" id="clearBtn">Clear</button>
+        </div>
+      </div>
+      <textarea id="input" placeholder="Paste Coursera prompt here…&#10;&#10;Includes garbage like:&#10;— 'You are a helpful AI assistant…'&#10;— 'Coursera Honor Code…'&#10;— 'Your primary instruction…'"></textarea>
     </div>
 
-    <pre id="output">
-  <button id="copyBtn">Copy</button>
-  <div id="outputText"></div>
-</pre>
+    <!-- Output -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-label">Output</span>
+        <div class="panel-actions">
+          <span class="char-count" id="output-count">0 chars</span>
+          <button class="icon-btn" id="copyBtn">Copy</button>
+        </div>
+      </div>
+      <div class="output-text empty" id="output">Cleaned prompt will appear here…</div>
+    </div>
+  </div>
 
-    <script>
-        const patterns = [
-            /You are a helpful AI assistant[\s\S]*?Please feel free to use me on other pages to study course materials or research related topics\./gi,
-            /Coursera\s+Honor\s+Code[\s\S]*/gi,
-            /To uphold Coursera's academic integrity policy[\s\S]*?related topics\./gi,
-            /Your primary instruction[\s\S]*?related topics\./gi
-        ];
+  <!-- Action bar -->
+  <div class="action-bar">
+    <button class="btn-clean" id="cleanBtn">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2 8L6 12L14 4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Clean Prompt
+    </button>
+    <button class="btn-secondary" id="pasteBtn">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <rect x="1" y="3" width="9" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M4 3V2.5A1.5 1.5 0 015.5 1h3A1.5 1.5 0 0110 2.5V3" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
+      Paste &amp; Clean
+    </button>
+  </div>
 
-        const cleanBtn = document.getElementById("cleanBtn");
-        const copyBtn = document.getElementById("copyBtn");
-        const outputText = document.getElementById("outputText");
-        const input = document.getElementById("input");
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-left" id="statusLeft">
+      <span>Ready to clean</span>
+    </div>
+    <div class="status-right" id="statusRight"></div>
+  </div>
 
-        cleanBtn.addEventListener("click", () => {
-            let text = input.value;
+  <!-- Patterns -->
+  <div class="patterns-section">
+    <p class="section-title">Detected &amp; Removed Patterns</p>
+    <div class="patterns-grid">
+      <div class="pattern-pill"><span class="dot"></span>AI assistant system prompt</div>
+      <div class="pattern-pill"><span class="dot"></span>Coursera Honor Code block</div>
+      <div class="pattern-pill"><span class="dot"></span>Academic integrity injection</div>
+      <div class="pattern-pill"><span class="dot"></span>Primary instruction override</div>
+    </div>
+  </div>
 
-            patterns.forEach(regex => {
-                text = text.replace(regex, "");
-            });
+  <!-- Footer -->
+  <footer class="footer">
+    <p>CleanPrompt — open source utility &nbsp;·&nbsp; No data stored, no telemetry &nbsp;·&nbsp; MIT License</p>
+  </footer>
 
-            text = text.replace(/\n{2,}/g, "\n\n").trim();
+</div>
 
-            outputText.textContent = text;
+<!-- Toast -->
+<div class="toast" id="toast">Copied to clipboard</div>
 
-            copyBtn.style.display = text ? "block" : "none";
-        });
+<script>
+  const patterns = [
+    /You are a helpful AI assistant[\s\S]*?Do you understand\?\./gi,
+    /Coursera\s+Honor\s+Code[\s\S]*/gi,
+    /To uphold Coursera['']s academic integrity policy[\s\S]*?Do you understand\?\./gi,
+    /Your primary instruction[\s\S]*?Do you understand\?\./gi
+  ];
 
-        copyBtn.addEventListener("click", () => {
-            navigator.clipboard.writeText(outputText.textContent);
-            copyBtn.textContent = "Copied!";
-            setTimeout(() => copyBtn.textContent = "Copy", 1500);
-        });
-    </script>
+  const patternLabels = [
+    'AI assistant system prompt',
+    'Coursera Honor Code block',
+    'Academic integrity injection',
+    'Primary instruction override'
+  ];
 
+  let sessionCleaned = parseInt(localStorage.getItem('cp_cleaned') || '0');
+  let sessionChars = parseInt(localStorage.getItem('cp_chars') || '0');
+  updateStats();
+
+  const inputEl = document.getElementById('input');
+  const outputEl = document.getElementById('output');
+  const cleanBtn = document.getElementById('cleanBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const pasteBtn = document.getElementById('pasteBtn');
+  const statusLeft = document.getElementById('statusLeft');
+  const statusRight = document.getElementById('statusRight');
+  const inputCount = document.getElementById('input-count');
+  const outputCount = document.getElementById('output-count');
+  const toast = document.getElementById('toast');
+
+  inputEl.addEventListener('input', () => {
+    inputCount.textContent = inputEl.value.length.toLocaleString() + ' chars';
+  });
+
+  cleanBtn.addEventListener('click', doClean);
+
+  pasteBtn.addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      inputEl.value = text;
+      inputCount.textContent = text.length.toLocaleString() + ' chars';
+      doClean();
+    } catch {
+      showToast('Paste permission denied');
+    }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    inputEl.value = '';
+    outputEl.textContent = 'Cleaned prompt will appear here…';
+    outputEl.classList.add('empty');
+    inputCount.textContent = '0 chars';
+    outputCount.textContent = '0 chars';
+    statusLeft.innerHTML = '<span>Ready to clean</span>';
+    statusRight.innerHTML = '';
+  });
+
+  copyBtn.addEventListener('click', () => {
+    const text = outputEl.dataset.raw || '';
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => copyBtn.textContent = 'Copy', 1500);
+      showToast('Copied to clipboard');
+    });
+  });
+
+  function doClean() {
+    let text = inputEl.value;
+    if (!text.trim()) { showToast('Nothing to clean'); return; }
+
+    const originalLen = text.length;
+    const matched = [];
+
+    patterns.forEach((regex, i) => {
+      const before = text.length;
+      const cleaned = text.replace(regex, '');
+      if (cleaned.length < before) matched.push(patternLabels[i]);
+      text = cleaned;
+    });
+
+    text = text.replace(/\n{3,}/g, '\n\n').trim();
+    const removedChars = originalLen - text.length;
+
+    outputEl.textContent = text;
+    outputEl.dataset.raw = text;
+    outputEl.classList.remove('empty');
+    outputCount.textContent = text.length.toLocaleString() + ' chars';
+
+    // Status
+    if (matched.length > 0) {
+      const badges = matched.map(m =>
+        `<span class="removed-badge"><span style="width:5px;height:5px;border-radius:50%;background:#ff6b6b;display:inline-block;"></span>${m}</span>`
+      ).join('');
+      statusLeft.innerHTML = badges;
+      statusRight.innerHTML = `<span style="color:var(--danger);">−${removedChars.toLocaleString()} chars</span>`;
+
+      sessionCleaned++;
+      sessionChars += removedChars;
+      localStorage.setItem('cp_cleaned', sessionCleaned);
+      localStorage.setItem('cp_chars', sessionChars);
+      updateStats();
+    } else {
+      statusLeft.innerHTML = '<span style="color:var(--success);">No injections found — prompt looks clean</span>';
+      statusRight.innerHTML = '';
+    }
+
+    showToast(matched.length > 0 ? `Removed ${matched.length} injection${matched.length > 1 ? 's' : ''}` : 'Already clean!');
+  }
+
+  function updateStats() {
+    document.getElementById('stat-cleaned').textContent = sessionCleaned.toLocaleString();
+    document.getElementById('stat-chars').textContent = sessionChars >= 1000
+      ? (sessionChars / 1000).toFixed(1) + 'k'
+      : sessionChars.toLocaleString();
+  }
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  // Keyboard shortcut: Cmd/Ctrl + Enter
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      doClean();
+    }
+  });
+</script>
 </body>
-
 </html>
